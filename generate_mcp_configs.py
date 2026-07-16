@@ -1,65 +1,184 @@
+from __future__ import annotations
+
 import json
+import shutil
 import stat
+from collections import OrderedDict
+from pathlib import Path
 
-from mcp_corpora import EXTENDED_CORPORA, FEATURES, ROOT, absolute_path, corpus_args
+from mcp_corpora import EXTENDED_CORPORA, ROOT, corpus_args
 
 
-def write_executable(path, text):
+SEFARIA_URL = "https://mcp.sefaria.org/sse"
+
+
+def write_executable(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text)
     path.chmod(path.stat().st_mode | stat.S_IXUSR)
 
 
-def main():
+def venv_executable(name: str) -> Path:
+    candidates = [
+        ROOT / ".venv" / "bin" / name,
+        ROOT / ".venv" / "Scripts" / f"{name}.exe",
+        ROOT / ".venv" / "Scripts" / name,
+    ]
+    return next((path for path in candidates if path.exists()), candidates[0])
+
+
+def installed_corpora() -> OrderedDict[str, str]:
+    return OrderedDict(
+        (name, path)
+        for name, path in EXTENDED_CORPORA.items()
+        if (ROOT / path / "otype.tf").is_file()
+    )
+
+
+def local_servers(corpora: OrderedDict[str, str]) -> dict[str, dict]:
+    servers = {
+        "ancient-corpora": {
+            "command": str(venv_executable("cfabric-mcp")),
+            "args": corpus_args(corpora, absolute=True, include_features=False),
+            "cwd": str(ROOT),
+        }
+    }
+
+    sedra_entry = ROOT / "servers" / "bethmardutho" / "dist" / "index.js"
+    node = shutil.which("node")
+    if sedra_entry.is_file() and node:
+        servers["bethmardutho"] = {
+            "command": node,
+            "args": [str(sedra_entry)],
+            "cwd": str(sedra_entry.parent.parent),
+        }
+    return servers
+
+
+def write_launcher(corpora: OrderedDict[str, str]) -> Path:
     launcher = ROOT / "run-mcp-extended.sh"
     lines = [
         "#!/usr/bin/env bash",
         "set -euo pipefail",
         f'cd "{ROOT}"',
-        'exec "./.venv/bin/cfabric-mcp" \\',
+        f'exec "{venv_executable("cfabric-mcp")}" \\',
     ]
-    args = corpus_args(EXTENDED_CORPORA, include_features=False)
+    args = corpus_args(corpora, absolute=True, include_features=False)
     for index in range(0, len(args), 2):
         flag, value = args[index], args[index + 1]
         suffix = " \\" if index + 2 < len(args) else ""
         lines.append(f'  {flag} "{value}"{suffix}')
     write_executable(launcher, "\n".join(lines) + "\n")
+    return launcher
 
-    desktop_config = {
-        "mcpServers": {
-            "ancient-corpora": {
-                "command": absolute_path(".venv/bin/cfabric-mcp"),
-                "args": corpus_args(
-                    EXTENDED_CORPORA, absolute=True, include_features=False
-                ),
-            }
-        }
-    }
-    config_path = ROOT / "clients" / "claude_desktop_config.extended.generated.json"
-    config_path.write_text(json.dumps(desktop_config, ensure_ascii=False, indent=2) + "\n")
 
-    code_setup = ROOT / "clients" / "claude_code_extended_setup.generated.sh"
-    code_lines = [
-        "#!/usr/bin/env bash",
-        "set -euo pipefail",
-        f'claude mcp add ancient-corpora -- "{absolute_path(".venv/bin/cfabric-mcp")}" \\',
-    ]
-    args = corpus_args(EXTENDED_CORPORA, absolute=True, include_features=False)
-    for index in range(0, len(args), 2):
-        flag, value = args[index], args[index + 1]
-        suffix = " \\" if index + 2 < len(args) else ""
-        code_lines.append(f'  {flag} "{value}"{suffix}')
-    code_lines.extend(
+def write_claude_configs(servers: dict[str, dict]) -> list[Path]:
+    clients_dir = ROOT / "clients"
+    clients_dir.mkdir(exist_ok=True)
+
+    desktop_path = clients_dir / "claude_desktop_config.extended.generated.json"
+    desktop_path.write_text(
+        json.dumps({"mcpServers": servers}, ensure_ascii=False, indent=2) + "\n"
+    )
+
+    code_path = clients_dir / "claude_code_extended_setup.generated.sh"
+    lines = ["#!/usr/bin/env bash", "set -euo pipefail"]
+    for name, server in servers.items():
+        command = json.dumps(server["command"])
+        args = " ".join(json.dumps(value) for value in server.get("args", []))
+        lines.append(f"claude mcp add {name} -- {command} {args}".rstrip())
+    lines.extend(
         [
-            "claude mcp add --transport sse sefaria https://mcp.sefaria.org/sse",
+            f"claude mcp add --transport sse sefaria {SEFARIA_URL}",
             "claude mcp list",
         ]
     )
-    write_executable(code_setup, "\n".join(code_lines) + "\n")
+    write_executable(code_path, "\n".join(lines) + "\n")
+    return [desktop_path, code_path]
 
-    print(f"Wrote {launcher}")
-    print(f"Wrote {config_path}")
-    print(f"Wrote {code_setup}")
-    print(f"Configured {len(EXTENDED_CORPORA)} corpora, including {sum(name.startswith('greek_') for name in EXTENDED_CORPORA)} from greek_literature.")
+
+def write_antigravity_config(servers: dict[str, dict]) -> Path:
+    config_path = ROOT / ".agents" / "mcp_config.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    antigravity_servers = dict(servers)
+    antigravity_servers["sefaria"] = {"serverUrl": SEFARIA_URL}
+    config_path.write_text(
+        json.dumps(
+            {"mcpServers": antigravity_servers}, ensure_ascii=False, indent=2
+        )
+        + "\n"
+    )
+    return config_path
+
+
+def toml_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def toml_array(values: list[str]) -> str:
+    return "[" + ", ".join(toml_string(value) for value in values) + "]"
+
+
+def write_codex_server(lines: list[str], name: str, server: dict) -> None:
+    lines.extend(
+        [
+            f"[mcp_servers.{name}]",
+            f"command = {toml_string(server['command'])}",
+            f"args = {toml_array(server.get('args', []))}",
+            f"cwd = {toml_string(server.get('cwd', str(ROOT)))}",
+            "startup_timeout_sec = 180",
+            "tool_timeout_sec = 120",
+            "",
+        ]
+    )
+
+
+def write_codex_config(servers: dict[str, dict]) -> Path:
+    config_path = ROOT / ".codex" / "config.toml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Generated by generate_mcp_configs.py. Regenerate after moving the checkout.",
+        "",
+    ]
+    for name, server in servers.items():
+        write_codex_server(lines, name, server)
+
+    proxy = venv_executable("mcp-proxy")
+    if proxy.exists():
+        write_codex_server(
+            lines,
+            "sefaria",
+            {
+                "command": str(proxy),
+                "args": [SEFARIA_URL],
+                "cwd": str(ROOT),
+            },
+        )
+    config_path.write_text("\n".join(lines))
+    return config_path
+
+
+def main() -> None:
+    corpora = installed_corpora()
+    if not corpora:
+        raise SystemExit("No installed Text-Fabric corpora found; run ./setup.sh first.")
+
+    servers = local_servers(corpora)
+    written = [
+        write_launcher(corpora),
+        *write_claude_configs(servers),
+        write_antigravity_config(servers),
+        write_codex_config(servers),
+    ]
+
+    print("Generated MCP configuration for the installed corpora:")
+    for path in written:
+        print(f"- {path.relative_to(ROOT)}")
+    print(f"Configured {len(corpora)} corpora: {', '.join(corpora)}")
+    if "bethmardutho" not in servers:
+        print("SEDRA omitted: install servers/bethmardutho and Node.js, then regenerate.")
+    if not venv_executable("mcp-proxy").exists():
+        print("Codex Sefaria omitted: install mcp-proxy, then regenerate.")
 
 
 if __name__ == "__main__":

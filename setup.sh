@@ -24,7 +24,7 @@ uv venv --python 3.13 "$VENV"
 source "$VENV/bin/activate"
 
 echo "==> Installing MCP packages"
-uv pip install cfabric-mcp "mcp[cli]" httpx anyio
+uv pip install "cfabric-mcp==0.1.7" "mcp[cli]" "mcp-proxy==0.12.0" httpx anyio
 
 echo "==> Fetching corpora"
 mkdir -p "$CORPORA"
@@ -48,54 +48,15 @@ for tf_dir in "$CUC_TF" "$BHSA_TF"; do
   fi
 done
 
-echo "==> Writing local launcher"
-cat > "$HERE/run-mcp.sh" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-cd "$HERE"
-exec "$VENV/bin/cfabric-mcp" \\
-  --corpus cuc="$CUC_TF" \\
-  --corpus bhsa="$BHSA_TF" \\
-  --features "g_cons g_word_utf8 lex book chapter verse language line tablet"
-EOF
-chmod +x "$HERE/run-mcp.sh"
+echo "==> Writing MCP configs for Antigravity, Codex, and Claude"
+"$VENV/bin/python" "$HERE/generate_mcp_configs.py"
 
-echo "==> Writing client config examples"
-mkdir -p "$HERE/clients"
-cat > "$HERE/clients/claude_desktop_config.generated.json" <<EOF
-{
-  "mcpServers": {
-    "cuc-bhsa": {
-      "command": "$VENV/bin/cfabric-mcp",
-      "args": [
-        "--corpus", "cuc=$CUC_TF",
-        "--corpus", "bhsa=$BHSA_TF",
-        "--features", "g_cons g_word_utf8 lex book chapter verse language line tablet"
-      ]
-    }
-  }
-}
-EOF
-
-cat > "$HERE/clients/claude_code_setup.generated.sh" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-claude mcp add cuc-bhsa -- "$VENV/bin/cfabric-mcp" \\
-  --corpus cuc="$CUC_TF" \\
-  --corpus bhsa="$BHSA_TF" \\
-  --features "g_cons g_word_utf8 lex book chapter verse language line tablet"
-claude mcp add --transport sse sefaria https://mcp.sefaria.org/sse
-claude mcp list
-EOF
-chmod +x "$HERE/clients/claude_code_setup.generated.sh"
-
-echo "==> Verifying through MCP clients"
+echo "==> Verifying MCP services and transport compatibility"
 "$VENV/bin/python" "$HERE/verify.py"
 
 cat <<EOF
 
 Setup complete.
-Run ./run-mcp.sh to keep the local CUC+BHSA ContextFabric MCP server open,
-or use one of the generated client configs in ./clients/.
-Sefaria Texts MCP is hosted at https://mcp.sefaria.org/sse.
+Open this folder in Antigravity or Codex, refresh MCP servers, and try a prompt
+from examples/tongues-of-fire.md. Generated client configs are machine-local.
 EOF

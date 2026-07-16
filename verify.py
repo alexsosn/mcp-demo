@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import anyio
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.sse import sse_client
 from mcp.client.stdio import stdio_client
 
 
@@ -59,10 +59,14 @@ async def verify_cfabric() -> None:
 
 
 async def verify_sefaria() -> None:
-    async with sse_client("https://mcp.sefaria.org/sse", sse_read_timeout=60) as (
-        read,
-        write,
-    ):
+    proxy = Path(".venv/bin/mcp-proxy")
+    if not proxy.exists():
+        proxy = Path(".venv/Scripts/mcp-proxy.exe")
+    params = StdioServerParameters(
+        command=str(proxy),
+        args=["https://mcp.sefaria.org/sse"],
+    )
+    async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
             tools = [tool.name for tool in (await session.list_tools()).tools]
@@ -88,7 +92,7 @@ async def main() -> None:
     await verify_cfabric()
     print("\n==> Verifying hosted Sefaria Texts MCP")
     await verify_sefaria()
-    print("\nALL THREE INTERROGABLE")
+    print("\nLOCAL CORPORA AND SEFARIA PROXY VERIFIED")
 
 
 if __name__ == "__main__":

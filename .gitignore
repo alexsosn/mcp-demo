@@ -10,6 +10,8 @@ corpora/
 run-mcp*.sh
 clients/*.generated.json
 clients/*.generated.sh
+.agents/mcp_config.json
+.codex/config.toml
 out/
 
 # Local tooling and separately cloned dependencies

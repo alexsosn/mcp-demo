@@ -1,5 +1,5 @@
 {
-  "_comment": "Template. After running ./setup.sh, prefer the auto-generated clients/claude_desktop_config.generated.json, which already has your absolute paths filled in. Merge the mcpServers entry into your real claude_desktop_config.json (Claude Desktop → Settings → Developer → Edit Config). Sefaria is NOT added here — add it as a remote connector (Settings → Connectors → Add custom connector → https://mcp.sefaria.org/sse).",
+  "_comment": "Optional Claude template. After ./setup.sh, prefer clients/claude_desktop_config.extended.generated.json, which contains paths for this checkout. Antigravity and Codex use their generated project configs instead.",
   "mcpServers": {
     "cuc-bhsa": {
       "command": "/ABS/PATH/mcp-demo/.venv/bin/cfabric-mcp",
