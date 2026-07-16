@@ -27,9 +27,19 @@ cd mcp-demo
 ./setup.sh
 ```
 
+For Antigravity, use this variant to also merge the generated servers into its
+global MCP config:
+
+```bash
+./setup.sh --antigravity-global
+```
+
+The merge preserves unrelated global servers, makes an `mcp_config.json.bak`
+backup, and updates this demo's servers. Codex needs only the standard command.
+
 The setup script:
 
-1. Creates a Python 3.13 virtual environment.
+1. Creates or reuses a compatible Python 3.13 virtual environment.
 2. Installs ContextFabric, the MCP SDK, and the Sefaria transport bridge.
 3. Downloads CUC, BHSA, and eight curated Greek works. The Greek repository uses
    a sparse clone, so it does not download all 1,779 available works.
@@ -57,6 +67,10 @@ Antigravity discovers the generated workspace configuration at:
 ```text
 .agents/mcp_config.json
 ```
+
+For the most reliable setup across current Antigravity installations, run
+`./setup.sh --antigravity-global`. This merges the same generated servers into
+Antigravity's global config without deleting existing servers. Then:
 
 1. Open this repository as an Antigravity project.
 2. Open **MCP Servers** from the `...` menu in the agent panel.
@@ -146,7 +160,23 @@ greek_xenophon_hellenica
 ```
 
 If an earlier run installed only CUC and BHSA, rerun `./setup.sh`, then refresh
-the MCP servers in Antigravity. Existing corpus checkouts are reused.
+the MCP servers in Antigravity. If Antigravity uses its global config, rerun
+`./setup.sh --antigravity-global` instead. Existing corpora and a compatible
+Python 3.13 virtual environment are reused.
+
+## Updating an Existing Checkout
+
+Keep tracked repository files unchanged, then update and rerun setup:
+
+```bash
+git status --short
+git pull --ff-only
+./setup.sh --antigravity-global  # or ./setup.sh for Codex
+```
+
+If `git status` reports tracked changes, commit or stash work you need before
+pulling. Revert a file only when those local changes are disposable. Setup now
+reuses a compatible `.venv`; `UV_VENV_CLEAR=1` is not required.
 
 ## Install the Extended Corpus Set
 
