@@ -55,6 +55,17 @@ def local_servers(corpora: OrderedDict[str, str]) -> dict[str, dict]:
     return servers
 
 
+def sefaria_proxy_server() -> dict | None:
+    proxy = venv_executable("mcp-proxy")
+    if not proxy.exists():
+        return None
+    return {
+        "command": str(proxy),
+        "args": [SEFARIA_URL],
+        "cwd": str(ROOT),
+    }
+
+
 def write_launcher(corpora: OrderedDict[str, str]) -> Path:
     launcher = ROOT / "run-mcp-extended.sh"
     lines = [
@@ -101,7 +112,9 @@ def write_antigravity_config(servers: dict[str, dict]) -> Path:
     config_path = ROOT / ".agents" / "mcp_config.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     antigravity_servers = dict(servers)
-    antigravity_servers["sefaria"] = {"serverUrl": SEFARIA_URL}
+    proxy_server = sefaria_proxy_server()
+    if proxy_server:
+        antigravity_servers["sefaria"] = proxy_server
     config_path.write_text(
         json.dumps(
             {"mcpServers": antigravity_servers}, ensure_ascii=False, indent=2
@@ -143,17 +156,9 @@ def write_codex_config(servers: dict[str, dict]) -> Path:
     for name, server in servers.items():
         write_codex_server(lines, name, server)
 
-    proxy = venv_executable("mcp-proxy")
-    if proxy.exists():
-        write_codex_server(
-            lines,
-            "sefaria",
-            {
-                "command": str(proxy),
-                "args": [SEFARIA_URL],
-                "cwd": str(ROOT),
-            },
-        )
+    proxy_server = sefaria_proxy_server()
+    if proxy_server:
+        write_codex_server(lines, "sefaria", proxy_server)
     config_path.write_text("\n".join(lines))
     return config_path
 
@@ -177,8 +182,8 @@ def main() -> None:
     print(f"Configured {len(corpora)} corpora: {', '.join(corpora)}")
     if "bethmardutho" not in servers:
         print("SEDRA omitted: install servers/bethmardutho and Node.js, then regenerate.")
-    if not venv_executable("mcp-proxy").exists():
-        print("Codex Sefaria omitted: install mcp-proxy, then regenerate.")
+    if not sefaria_proxy_server():
+        print("Sefaria omitted from Antigravity and Codex: install mcp-proxy, then regenerate.")
 
 
 if __name__ == "__main__":

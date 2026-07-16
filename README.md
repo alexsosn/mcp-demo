@@ -63,9 +63,16 @@ Antigravity discovers the generated workspace configuration at:
 4. Confirm `ancient-corpora` and `sefaria` are connected.
 5. Ask: `Using ancient-corpora, search CUC for word g_cons=aṯrt.`
 
-Antigravity supports the local STDIO corpus server and Sefaria's remote SSE
-endpoint directly. Its workspace configuration format is documented in the
+Antigravity supports the local STDIO corpus server directly. Sefaria Texts still
+uses the older GET-based SSE transport, while current Antigravity initializes a
+`serverUrl` with Streamable HTTP POST requests. The generated config therefore
+runs `mcp-proxy` locally and presents Sefaria Texts to Antigravity as STDIO. Its
+workspace configuration format is documented in the
 [Antigravity MCP guide](https://antigravity.google/docs/mcp).
+
+Do not replace the Texts endpoint with `https://developers.sefaria.org/mcp`.
+That Streamable HTTP endpoint is a different MCP server for Sefaria's developer
+and API documentation; it does not expose the Jewish-text tools used by this demo.
 
 ## Use with ChatGPT Codex
 
@@ -115,7 +122,7 @@ local Codex use the MCP endpoint without that connector workflow.
 | Capability | Antigravity | Codex | Claude |
 |---|---|---|---|
 | Local ContextFabric corpora | workspace STDIO | project STDIO | local STDIO |
-| Sefaria Texts MCP | direct remote SSE | SSE-to-STDIO proxy | custom connector or SSE |
+| Sefaria Texts MCP | SSE-to-STDIO proxy | SSE-to-STDIO proxy | custom connector or SSE |
 | Local SEDRA server | workspace STDIO | project STDIO | local STDIO |
 | Generated config location | `.agents/` | `.codex/` | `clients/` |
 

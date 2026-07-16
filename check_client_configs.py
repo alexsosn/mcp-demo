@@ -43,16 +43,15 @@ def main() -> None:
     validate_ancient_corpora("Codex", codex["ancient-corpora"])
     validate_ancient_corpora("Claude", claude["ancient-corpora"])
 
-    if antigravity["sefaria"].get("serverUrl") != SEFARIA_URL:
-        raise SystemExit("Antigravity: Sefaria must use the remote serverUrl field")
-    print("Antigravity: direct Sefaria SSE configuration is valid")
-
-    codex_sefaria = codex["sefaria"]
-    if Path(codex_sefaria["command"]).name not in {"mcp-proxy", "mcp-proxy.exe"}:
-        raise SystemExit("Codex: Sefaria must use the local mcp-proxy bridge")
-    if codex_sefaria.get("args") != [SEFARIA_URL]:
-        raise SystemExit("Codex: unexpected Sefaria proxy arguments")
-    print("Codex: Sefaria STDIO proxy configuration is valid")
+    for client, server in [
+        ("Antigravity", antigravity["sefaria"]),
+        ("Codex", codex["sefaria"]),
+    ]:
+        if Path(server["command"]).name not in {"mcp-proxy", "mcp-proxy.exe"}:
+            raise SystemExit(f"{client}: Sefaria must use the local mcp-proxy bridge")
+        if server.get("args") != [SEFARIA_URL]:
+            raise SystemExit(f"{client}: unexpected Sefaria proxy arguments")
+        print(f"{client}: Sefaria SSE-to-STDIO proxy configuration is valid")
 
     print("All generated client configurations are valid.")
 
