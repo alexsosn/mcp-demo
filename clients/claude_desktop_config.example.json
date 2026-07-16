@@ -1,0 +1,13 @@
+{
+  "_comment": "Template. After running ./setup.sh, prefer the auto-generated clients/claude_desktop_config.generated.json, which already has your absolute paths filled in. Merge the mcpServers entry into your real claude_desktop_config.json (Claude Desktop → Settings → Developer → Edit Config). Sefaria is NOT added here — add it as a remote connector (Settings → Connectors → Add custom connector → https://mcp.sefaria.org/sse).",
+  "mcpServers": {
+    "cuc-bhsa": {
+      "command": "/ABS/PATH/mcp-demo/.venv/bin/cfabric-mcp",
+      "args": [
+        "--corpus", "cuc=/ABS/PATH/mcp-demo/corpora/cuc/tf/0.2.7",
+        "--corpus", "bhsa=/ABS/PATH/mcp-demo/corpora/bhsa/tf/4b",
+        "--features", "g_cons g_word_utf8 lex book chapter verse language line tablet"
+      ]
+    }
+  }
+}

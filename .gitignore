@@ -1,0 +1,20 @@
+# Python env
+.venv/
+__pycache__/
+*.pyc
+
+# Downloaded corpora (large; fetched by setup.sh)
+corpora/
+
+# Generated, machine-specific (absolute paths)
+run-mcp*.sh
+clients/*.generated.json
+clients/*.generated.sh
+out/
+
+# Local tooling and separately cloned dependencies
+.codegraph/
+servers/bethmardutho/
+
+# OS
+.DS_Store
