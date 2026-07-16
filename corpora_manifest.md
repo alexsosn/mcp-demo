@@ -6,7 +6,9 @@ Literature repository is a collection of many corpus directories, not one corpus
 
 ## Installation Sources
 
-Clone these repositories into the `corpora/` directory of this checkout:
+`./setup.sh` installs CUC, BHSA, and the eight curated Greek works. It uses a
+sparse checkout for Greek Literature so a workshop installation does not fetch
+all 1,779 works. The remaining sources are used by the optional extended profile:
 
 | Directory | Source repo |
 |---|---|
@@ -21,10 +23,9 @@ Clone these repositories into the `corpora/` directory of this checkout:
 | `corpora/oldbabylonian` | `https://github.com/Nino-cunei/oldbabylonian.git` |
 | `corpora/oldassyrian` | `https://github.com/Nino-cunei/oldassyrian.git` |
 
-After cloning:
+After adding or changing corpus checkouts, regenerate the client configs:
 
 ```bash
-./.venv/bin/python build_greek_literature_catalog.py
 ./.venv/bin/python generate_mcp_configs.py
 ```
 
@@ -83,13 +84,14 @@ but it is a native ETCBC Text-Fabric dataset and supports morphological queries.
 
 ## Greek Literature Notes
 
-`pthu/greek_literature` contains 1,779 separate Text-Fabric corpora. The catalog
-is stored in `greek_literature_catalog.tsv`. Add more works in `mcp_corpora.py`,
-then run:
+`pthu/greek_literature` contains 1,779 separate Text-Fabric corpora. The default
+sparse checkout contains only the eight curated works, while the full catalog is
+stored in `greek_literature_catalog.tsv`. Add more works in `mcp_corpora.py`,
+then rerun `./setup.sh` to update the sparse checkout and configs. To inspect a
+full checkout, rebuild the catalog with:
 
 ```bash
-./.venv/bin/python generate_mcp_configs.py
-./.venv/bin/python check_all_mcp.py
+./.venv/bin/python build_greek_literature_catalog.py
 ```
 
 Known `cfabric-mcp` edge cases from exploration:

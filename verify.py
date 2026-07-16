@@ -8,6 +8,8 @@ import anyio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from mcp_corpora import GREEK_LITERATURE_CORPORA
+
 
 CFABRIC_FEATURES = "g_cons g_word_utf8 lex book chapter verse language line tablet"
 
@@ -58,6 +60,32 @@ async def verify_cfabric() -> None:
             )
 
 
+async def verify_greek() -> bool:
+    installed = [
+        (name, path)
+        for name, path in GREEK_LITERATURE_CORPORA.items()
+        if (Path(path) / "otype.tf").is_file()
+    ]
+    if not installed:
+        return False
+
+    name, path = installed[0]
+    params = StdioServerParameters(
+        command="./.venv/bin/cfabric-mcp",
+        args=["--corpus", f"{name}={path}"],
+    )
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            print_text_result(
+                f"Greek smoke test: {name}",
+                await session.call_tool(
+                    "search", {"corpus": name, "template": "word", "limit": 5}
+                ),
+            )
+    return True
+
+
 async def verify_sefaria() -> None:
     proxy = Path(".venv/bin/mcp-proxy")
     if not proxy.exists():
@@ -90,6 +118,8 @@ async def verify_sefaria() -> None:
 async def main() -> None:
     print("==> Verifying local ContextFabric MCP")
     await verify_cfabric()
+    if await verify_greek():
+        print("\nCURATED GREEK CORPORA INSTALLED")
     print("\n==> Verifying hosted Sefaria Texts MCP")
     await verify_sefaria()
     print("\nLOCAL CORPORA AND SEFARIA PROXY VERIFIED")

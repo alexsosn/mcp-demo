@@ -14,7 +14,7 @@ which have free tiers. Claude remains supported, but is optional.
 | LXX, DSS, Extrabiblical, Peshitta, Syriac | local `cfabric-mcp` | verified |
 | Old Babylonian and Old Assyrian | local `cfabric-mcp` | verified |
 | selected Greek Literature works | local `cfabric-mcp` | verified |
-| Sefaria library | hosted MCP, proxied for Codex | verified |
+| Sefaria library | hosted MCP, proxied for local clients | verified |
 | SEDRA IV Syriac lexicons | optional local Node MCP | verified |
 
 ## Quick Start
@@ -31,7 +31,8 @@ The setup script:
 
 1. Creates a Python 3.13 virtual environment.
 2. Installs ContextFabric, the MCP SDK, and the Sefaria transport bridge.
-3. Downloads the workshop-sized CUC and BHSA corpus set.
+3. Downloads CUC, BHSA, and eight curated Greek works. The Greek repository uses
+   a sparse clone, so it does not download all 1,779 available works.
 4. Generates machine-local MCP configs for Antigravity, Codex, and Claude.
 5. Verifies local corpus searches and Sefaria access.
 
@@ -45,9 +46,9 @@ by Git, and can be recreated after moving the repository:
 The generator automatically includes every corpus that is installed at one of
 the paths declared in `mcp_corpora.py`.
 
-The two-corpus quick-start profile initializes in a few seconds. The full
-17-corpus profile can take one or two minutes on its first load; the generated
-Codex config allows three minutes for MCP startup.
+The default workshop profile configures ten corpora and can take one or two
+minutes on its first load. The generated Codex config allows three minutes for
+MCP startup. For a faster two-corpus installation, use `./setup.sh --minimal`.
 
 ## Use with Antigravity IDE
 
@@ -62,6 +63,8 @@ Antigravity discovers the generated workspace configuration at:
 3. Select **Manage MCP Servers**, then refresh the installed servers.
 4. Confirm `ancient-corpora` and `sefaria` are connected.
 5. Ask: `Using ancient-corpora, search CUC for word g_cons=aṯrt.`
+6. For the Greek demo, ask: `Using ancient-corpora, search
+   greek_homer_iliad with template word and return the first five words.`
 
 Antigravity supports the local STDIO corpus server directly. Sefaria Texts still
 uses the older GET-based SSE transport, while current Antigravity initializes a
@@ -126,31 +129,10 @@ local Codex use the MCP endpoint without that connector workflow.
 | Local SEDRA server | workspace STDIO | project STDIO | local STDIO |
 | Generated config location | `.agents/` | `.codex/` | `clients/` |
 
-## Install the Extended Corpus Set
+## Default Greek Corpus Set
 
-The quick start installs CUC and BHSA. To reproduce the full workshop profile,
-clone the remaining repositories into `corpora/`:
-
-```bash
-git clone --depth 1 https://github.com/CenterBLC/LXX.git corpora/lxx
-git clone --depth 1 https://github.com/pthu/greek_literature.git corpora/greek_literature
-git clone --depth 1 https://github.com/ETCBC/dss.git corpora/dss
-git clone --depth 1 https://github.com/ETCBC/extrabiblical.git corpora/extrabiblical
-git clone --depth 1 https://github.com/ETCBC/peshitta.git corpora/peshitta
-git clone --depth 1 https://github.com/ETCBC/syriac.git corpora/syriac
-git clone --depth 1 https://github.com/Nino-cunei/oldbabylonian.git corpora/oldbabylonian
-git clone --depth 1 https://github.com/Nino-cunei/oldassyrian.git corpora/oldassyrian
-```
-
-Expected Text-Fabric paths are listed in `corpora_manifest.md`. After cloning,
-regenerate the catalog and client configs:
-
-```bash
-./.venv/bin/python build_greek_literature_catalog.py
-./.venv/bin/python generate_mcp_configs.py
-```
-
-The curated Greek selection currently includes:
+The default `./setup.sh` command installs the following curated Greek works and
+automatically includes them in the Antigravity, Codex, and Claude configs:
 
 ```text
 greek_homer_iliad
@@ -163,9 +145,35 @@ greek_plato_cratylus
 greek_xenophon_hellenica
 ```
 
+If an earlier run installed only CUC and BHSA, rerun `./setup.sh`, then refresh
+the MCP servers in Antigravity. Existing corpus checkouts are reused.
+
+## Install the Extended Corpus Set
+
+To reproduce the full 17-corpus workshop profile, clone the additional
+repositories into `corpora/`:
+
+```bash
+git clone --depth 1 https://github.com/CenterBLC/LXX.git corpora/lxx
+git clone --depth 1 https://github.com/ETCBC/dss.git corpora/dss
+git clone --depth 1 https://github.com/ETCBC/extrabiblical.git corpora/extrabiblical
+git clone --depth 1 https://github.com/ETCBC/peshitta.git corpora/peshitta
+git clone --depth 1 https://github.com/ETCBC/syriac.git corpora/syriac
+git clone --depth 1 https://github.com/Nino-cunei/oldbabylonian.git corpora/oldbabylonian
+git clone --depth 1 https://github.com/Nino-cunei/oldassyrian.git corpora/oldassyrian
+```
+
+Expected Text-Fabric paths are listed in `corpora_manifest.md`. After cloning,
+regenerate the client configs:
+
+```bash
+./.venv/bin/python generate_mcp_configs.py
+```
+
 `pthu/greek_literature` contains many separate Text-Fabric corpora rather than
-one aggregate corpus. Add or remove curated works in `mcp_corpora.py`, then
-regenerate the configs.
+one aggregate corpus. The default sparse checkout downloads only the curated
+paths declared in `mcp_corpora.py`. Add or remove works there, then rerun
+`./setup.sh` to update the sparse checkout and regenerate the configs.
 
 ## Optional SEDRA Lexicons
 

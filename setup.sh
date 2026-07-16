@@ -5,9 +5,29 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
 
 VENV="$HERE/.venv"
-CORPORA="$HERE/corpora"
-CUC_TF="$CORPORA/cuc/tf/0.2.7"
-BHSA_TF="$CORPORA/bhsa/tf/4b"
+PROFILE="workshop"
+
+if [ "$#" -gt 1 ]; then
+  echo "ERROR: expected at most one option"
+  echo "Usage: ./setup.sh [--minimal]"
+  exit 2
+fi
+
+case "${1:-}" in
+  "") ;;
+  --minimal) PROFILE="minimal" ;;
+  --help|-h)
+    echo "Usage: ./setup.sh [--minimal]"
+    echo "  default: install CUC, BHSA, and the curated Greek workshop corpora"
+    echo "  --minimal: install only CUC and BHSA"
+    exit 0
+    ;;
+  *)
+    echo "ERROR: unknown option: $1"
+    echo "Usage: ./setup.sh [--minimal]"
+    exit 2
+    ;;
+esac
 
 echo "==> mcp-demo setup in: $HERE"
 
@@ -26,27 +46,8 @@ source "$VENV/bin/activate"
 echo "==> Installing MCP packages"
 uv pip install "cfabric-mcp==0.1.7" "mcp[cli]" "mcp-proxy==0.12.0" httpx anyio
 
-echo "==> Fetching corpora"
-mkdir -p "$CORPORA"
-if [ -d "$CORPORA/cuc/.git" ]; then
-  echo "    CUC already cloned"
-else
-  git clone --depth 1 https://github.com/DT-UCPH/cuc.git "$CORPORA/cuc"
-fi
-if [ -d "$CORPORA/bhsa/.git" ]; then
-  echo "    BHSA already cloned"
-else
-  git clone --depth 1 https://github.com/ETCBC/bhsa.git "$CORPORA/bhsa"
-fi
-
-for tf_dir in "$CUC_TF" "$BHSA_TF"; do
-  if [ ! -f "$tf_dir/otype.tf" ]; then
-    echo "ERROR: expected Text-Fabric data at $tf_dir"
-    echo "       Available otype.tf files:"
-    find "$CORPORA" -name otype.tf -print
-    exit 1
-  fi
-done
+echo "==> Fetching the $PROFILE corpus profile"
+"$VENV/bin/python" "$HERE/install_corpora.py" --profile "$PROFILE"
 
 echo "==> Writing MCP configs for Antigravity, Codex, and Claude"
 "$VENV/bin/python" "$HERE/generate_mcp_configs.py"
@@ -58,5 +59,6 @@ cat <<EOF
 
 Setup complete.
 Open this folder in Antigravity or Codex, refresh MCP servers, and try a prompt
-from examples/tongues-of-fire.md. Generated client configs are machine-local.
+from examples/tongues-of-fire.md. The default profile also includes the curated
+Greek workshop corpora. Generated client configs are machine-local.
 EOF
