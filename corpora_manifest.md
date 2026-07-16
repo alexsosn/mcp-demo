@@ -6,7 +6,7 @@ Literature repository is a collection of many corpus directories, not one corpus
 
 ## Installation Sources
 
-Clone these repositories under `~/projects/mcp-demo/corpora`:
+Clone these repositories into the `corpora/` directory of this checkout:
 
 | Directory | Source repo |
 |---|---|

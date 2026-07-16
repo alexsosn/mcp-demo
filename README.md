@@ -25,7 +25,8 @@ because some dependencies and corpus tooling were not ready for it.
 The verified environment is:
 
 ```bash
-cd ~/projects/mcp-demo
+git clone https://github.com/alexsosn/mcp-demo.git
+cd mcp-demo
 uv venv --python 3.13 .venv
 uv pip install cfabric-mcp "mcp[cli]" httpx anyio
 ```
@@ -35,7 +36,6 @@ uv pip install cfabric-mcp "mcp[cli]" httpx anyio
 Create the corpus directory and clone each upstream repository:
 
 ```bash
-cd ~/projects/mcp-demo
 mkdir -p corpora
 
 git clone --depth 1 https://github.com/DT-UCPH/cuc.git corpora/cuc
@@ -96,7 +96,6 @@ features and duplicate section levels in some Plato files.
 Use the extended launcher for the current setup:
 
 ```bash
-cd ~/projects/mcp-demo
 ./run-mcp-extended.sh
 ```
 
@@ -145,13 +144,17 @@ The active Claude Desktop config runs it as:
 ```json
 {
   "bethmardutho": {
-    "command": "/usr/local/bin/node",
+    "command": "node",
     "args": [
-      "/Users/alexandersosnovschenko/projects/mcp-demo/servers/bethmardutho/dist/index.js"
+      "<repo-root>/servers/bethmardutho/dist/index.js"
     ]
   }
 }
 ```
+
+Replace `<repo-root>` with the absolute path to this checkout. Using `node` lets
+the client resolve the executable from the local `PATH` instead of assuming a
+package-manager-specific install location.
 
 Validated examples:
 
@@ -170,27 +173,30 @@ clients/claude_desktop_config.extended.generated.json
 clients/claude_code_extended_setup.generated.sh
 ```
 
-For Claude Desktop, merge the generated `mcpServers.ancient-corpora` block into:
-
-```text
-/Users/alexandersosnovschenko/Library/Application Support/Claude/claude_desktop_config.json
-```
-
-The active Claude Desktop config has already been refreshed from the generated
-extended config. It points at:
-
-```text
-/Users/alexandersosnovschenko/projects/mcp-demo/.venv/bin/cfabric-mcp
-```
-
-and configures all 17 corpora with no `--features` filter. Fully restart Claude
-Desktop after changing this file so it starts a fresh MCP process.
+For Claude Desktop, merge the generated `mcpServers.ancient-corpora` block into
+the config opened by **Settings → Developer → Edit Config**. The generator writes
+absolute paths for the current checkout because desktop MCP clients require
+them; generated files are ignored by Git and should be recreated on each
+machine. The extended config includes all 17 corpora with no `--features`
+filter. Fully restart Claude Desktop after changing the file so it starts a
+fresh MCP process.
 
 For Claude Code:
 
 ```bash
 ./clients/claude_code_extended_setup.generated.sh
 claude mcp list
+```
+
+`check_sedra_config_mcp.py` discovers the normal Claude Desktop config location
+for macOS, Windows, and Linux. Override it when needed with
+`--config PATH` or the `CLAUDE_DESKTOP_CONFIG` environment variable.
+
+The CUC heatmap can optionally enrich tablet names from a separate catalog. Put
+that TSV at `data/ugaritic_texts_catalog.tsv`, or pass its location explicitly:
+
+```bash
+./.venv/bin/python build_cuc_rare_word_heatmap.py --catalog path/to/catalog.tsv
 ```
 
 ## Feature Coverage

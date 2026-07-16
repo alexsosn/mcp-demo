@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 import re
@@ -10,10 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 TF_DIR = ROOT / "corpora" / "cuc" / "tf" / "0.2.7"
 PARSING_DIR = ROOT / "corpora" / "cuc" / "auto_parsing" / "0.2.7"
-CATALOG_PATH = Path(
-    "/Users/alexandersosnovschenko/projects/summer_school_2026/"
-    "Antiquity Studies Summer School/data/ugaritic_texts_catalog.tsv"
-)
+DEFAULT_CATALOG_PATH = ROOT / "data" / "ugaritic_texts_catalog.tsv"
 OUT_DIR = ROOT / "out"
 OUT_HTML = OUT_DIR / "cuc_rare_word_heatmap.html"
 OUT_JSON = OUT_DIR / "cuc_rare_word_heatmap_data.json"
@@ -120,11 +118,11 @@ def parse_oslots(path: Path) -> dict[int, list[int]]:
     return edges
 
 
-def load_catalog_titles() -> dict[str, str]:
+def load_catalog_titles(catalog_path: Path) -> dict[str, str]:
     titles: dict[str, str] = {}
-    if not CATALOG_PATH.exists():
+    if not catalog_path.exists():
         return titles
-    with CATALOG_PATH.open(encoding="utf-8") as fh:
+    with catalog_path.open(encoding="utf-8") as fh:
         reader = csv.DictReader(fh, delimiter="\t")
         for row in reader:
             title = (row.get("text_descriptive_title") or "").strip()
@@ -247,7 +245,7 @@ def column_metric(
     }
 
 
-def build_data() -> dict:
+def build_data(catalog_path: Path = DEFAULT_CATALOG_PATH) -> dict:
     oslots = parse_oslots(TF_DIR / "oslots.tf")
     tablet_feature = parse_node_feature(TF_DIR / "tablet.tf")
     column_feature = parse_node_feature(TF_DIR / "column.tf")
@@ -255,7 +253,7 @@ def build_data() -> dict:
     sign = parse_node_feature(TF_DIR / "sign.tf")
     cert = parse_node_feature(TF_DIR / "cert.tf")
     emen = parse_node_feature(TF_DIR / "emen.tf")
-    title_by_tablet = load_catalog_titles()
+    title_by_tablet = load_catalog_titles(catalog_path)
     parsing = load_parsing_rows()
 
     sign_to_tablet: dict[int, int] = {}
@@ -740,8 +738,20 @@ renderDetails();
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Build the CUC rare-word heatmap.")
+    parser.add_argument(
+        "--catalog",
+        type=Path,
+        default=DEFAULT_CATALOG_PATH,
+        help=(
+            "optional Ugaritic catalog TSV used for descriptive tablet titles "
+            f"(default: {DEFAULT_CATALOG_PATH.relative_to(ROOT)})"
+        ),
+    )
+    args = parser.parse_args()
+
     OUT_DIR.mkdir(exist_ok=True)
-    data = build_data()
+    data = build_data(args.catalog.expanduser())
     OUT_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     OUT_HTML.write_text(build_html(data), encoding="utf-8")
     print(OUT_HTML)
